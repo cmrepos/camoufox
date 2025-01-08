@@ -82,7 +82,6 @@ def _suppress_insecure_warning():
         yield
 
 
-@lru_cache(maxsize=None)
 def public_ip(proxy: Optional[str] = None) -> str:
     """
     Sends a request to a public IP api

@@ -348,7 +348,7 @@ def get_geoip_from_cache(proxy_string: str, geoip_cache_db: str, geoip_cache_lif
     response = r.get(key)
     if response:
         ip, timestamp = response.split(',')
-        if int(timestamp) + geoip_cache_lifetime_seconds > int(time()):
+        if not geoip_cache_lifetime_seconds or int(timestamp) + geoip_cache_lifetime_seconds > int(time()):
             return ip
     return None
 

@@ -27,7 +27,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 click = "*"
 requests = "*"
 orjson = "*"
@@ -44,6 +44,7 @@ lxml = "*"
 language-tags = "*"
 pysocks = "*"
 geoip2 = {version = "*", optional = true}
+redis = "^5.2.1"
 
 [tool.poetry.extras]
 geoip = ["geoip2"]

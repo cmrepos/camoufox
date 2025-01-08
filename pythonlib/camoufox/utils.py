@@ -6,7 +6,9 @@ from pathlib import Path
 from pprint import pprint
 from random import randint, randrange
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union, cast
+from time import time
 
+import redis
 import numpy as np
 import orjson
 from browserforge.fingerprints import Fingerprint, Screen
@@ -39,6 +41,9 @@ CACHE_PREFS = {
     'browser.cache.disk_cache_ssl': True,
     'browser.cache.disk.smart_size.enabled': True,
 }
+
+
+GEOIP_CACHE_KEY_PREFIX = 'geoip_cache'
 
 
 def get_env_vars(
@@ -334,6 +339,29 @@ def sync_attach_vd(
     return browser
 
 
+def get_geoip_from_cache(proxy_string: str, geoip_cache_db: str, geoip_cache_lifetime_seconds: int, cache_key_prefix: str = GEOIP_CACHE_KEY_PREFIX) -> Optional[str]:
+    """
+    Get the IP address from the geoip cache.
+    """
+    r = redis.Redis.from_url(geoip_cache_db, decode_responses=True)
+    key = f'{cache_key_prefix}_{proxy_string}'
+    response = r.get(key)
+    if response:
+        ip, timestamp = response.split(',')
+        if int(timestamp) + geoip_cache_lifetime_seconds > int(time()):
+            return ip
+    return None
+
+
+def cache_geoip(proxy_string: str, ip: str, geoip_cache_db: str, cache_key_prefix: str = GEOIP_CACHE_KEY_PREFIX) -> None:
+    """
+    Cache the IP address for the geoip.
+    """
+    r = redis.Redis.from_url(geoip_cache_db, decode_responses=True)
+    key = f'{cache_key_prefix}_{proxy_string}'
+    r.set(key, f'{ip},{int(time())}')
+
+
 def launch_options(
     *,
     config: Optional[Dict[str, Any]] = None,
@@ -364,6 +392,9 @@ def launch_options(
     i_know_what_im_doing: Optional[bool] = None,
     debug: Optional[bool] = None,
     virtual_display: Optional[str] = None,
+    geoip_cache_enabled: Optional[bool] = None,
+    geoip_cache_db: Optional[str] = None,
+    geoip_cache_lifetime_seconds: Optional[int] = 300,
     **launch_options: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
@@ -544,7 +575,16 @@ def launch_options(
         if geoip is True:
             # Find the user's IP address
             if proxy:
-                geoip = public_ip(Proxy(**proxy).as_string())
+                cached_ip = None
+                proxy_string = Proxy(**proxy).as_string()
+                if geoip_cache_enabled and geoip_cache_db:
+                    cached_ip = get_geoip_from_cache(proxy_string, geoip_cache_db, geoip_cache_lifetime_seconds)
+                if cached_ip:
+                    geoip = cached_ip
+                else:
+                    geoip = public_ip(proxy_string)
+                    if geoip_cache_enabled and geoip_cache_db:
+                        cache_geoip(proxy_string, geoip, geoip_cache_db)
             else:
                 geoip = public_ip()
 

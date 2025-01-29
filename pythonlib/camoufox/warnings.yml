@@ -40,6 +40,12 @@ no_region: >-
 block_webgl: >-
     Disabling WebGL is not recommended. Many WAFs will check if WebGL is enabled.
 
+block_images: >-
+    Blocking image requests has been reported to cause detection issues on major WAFs.
+
 custom_fonts_only: >-
     Disabling OS-specific fonts while spoofing your OS will make your browser fingerprint inconsistent.
     WAFs can detect this mismatch between your claimed OS and available system fonts.
+
+disable_coop: >-
+    Disabling Cross-Origin-Opener-Policy (COOP) handling can potentially be detected by sophisticated WAFs.
